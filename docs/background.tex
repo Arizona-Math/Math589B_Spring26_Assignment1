@@ -1,0 +1,93 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,graphicx}
+\usepackage[margin=1in]{geometry}
+
+\title{Charged Elastic Rod in 3D: Discrete Energy, Gradient, and BFGS Optimization}
+\author{Numerical Methods Programming Assignment (Starter Note)}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+We model a closed filament in $\mathbb{R}^3$ (think: a charged DNA loop in solution) as $N$ nodes
+\[
+X = (\mathbf{x}_0,\dots,\mathbf{x}_{N-1}),\qquad \mathbf{x}_i\in\mathbb{R}^3,
+\]
+with \emph{periodic indexing} $\mathbf{x}_{i+N}=\mathbf{x}_i$. The goal is to minimize a total energy
+\[
+E(X) = E_{\text{bend}}(X) + E_{\text{stretch}}(X) + E_{\text{coul}}(X),
+\]
+using a quasi-Newton method (BFGS) in $\mathbb{R}^{3N}$.
+
+The optimization is \emph{nonconvex} and exhibits multiple local minima. Good numerical behavior requires:
+(i) correct analytic gradients, (ii) a line search, and (iii) robust updates.
+
+\section{Discrete energy}
+\subsection{Bending (curvature penalty)}
+A standard discrete curvature surrogate is the second difference:
+\[
+\mathbf{b}_i = \mathbf{x}_{i+1} - 2\mathbf{x}_i + \mathbf{x}_{i-1}.
+\]
+We define
+\[
+E_{\text{bend}} = k_b \sum_{i=0}^{N-1} \|\mathbf{b}_i\|^2.
+\]
+Large $k_b$ favors smoother curves.
+
+\subsection{Stretching (near-inextensibility)}
+Let segment vectors be $\mathbf{s}_i = \mathbf{x}_{i+1}-\mathbf{x}_i$ with length $r_i=\|\mathbf{s}_i\|$.
+We penalize deviation from rest length $\ell_0$:
+\[
+E_{\text{stretch}} = k_s \sum_{i=0}^{N-1} (r_i-\ell_0)^2.
+\]
+Typically $k_s\gg k_b$ to keep the filament close to inextensible.
+
+\subsection{Screened Coulomb repulsion}
+Charges on the filament repel. In ionic solution this is often modeled by Debye--H\"uckel screening:
+\[
+U(r)=\frac{q^2 e^{-\kappa r}}{r},
+\]
+with screening parameter $\kappa\ge 0$ (set $\kappa=0$ for unscreened Coulomb). The total repulsion is
+\[
+E_{\text{coul}} = \sum_{0\le i<j\le N-1\atop (i,j)\ \text{not neighbors}} U(\|\mathbf{x}_i-\mathbf{x}_j\|).
+\]
+We exclude adjacent neighbors (including the wrap neighbor $(0,N-1)$) to avoid double-counting interactions
+already represented by stretching/bending.
+
+\section{Gradients (high level)}
+Your optimizer will require $\nabla E(X)\in\mathbb{R}^{3N}$. The starter repository provides a C++ routine
+that returns both $E$ and $\nabla E$.
+
+Two typical patterns:
+\begin{itemize}
+\item For bending, each $\mathbf{x}_i$ appears in $\mathbf{b}_{i-1},\mathbf{b}_i,\mathbf{b}_{i+1}$, yielding a local stencil.
+\item For stretching and Coulomb terms, derivatives follow from the chain rule:
+\[
+\frac{\partial}{\partial \mathbf{x}} \|\mathbf{v}\| = \frac{\mathbf{v}}{\|\mathbf{v}\|},
+\]
+and for Coulomb:
+\[
+\frac{d}{dr}\left(\frac{q^2 e^{-\kappa r}}{r}\right)
+= q^2 e^{-\kappa r}\left(-\frac{1}{r^2} - \frac{\kappa}{r}\right).
+\]
+\end{itemize}
+
+\section{BFGS task}
+You will implement BFGS in Python to minimize $f(x)$ where $x\in\mathbb{R}^{3N}$ is the flattened coordinate vector.
+At iteration $k$:
+\begin{enumerate}
+\item compute direction $p_k = -H_k \nabla f(x_k)$ where $H_k$ approximates the inverse Hessian;
+\item choose step length $\alpha_k$ using a line search (Armijo or Wolfe conditions);
+\item update $x_{k+1}=x_k+\alpha_k p_k$;
+\item update $H_k$ using the BFGS inverse-Hessian update with curvature check $y_k^Ts_k>0$.
+\end{enumerate}
+
+\section{Suggested experiments}
+\begin{itemize}
+\item Compare BFGS vs. gradient descent on the same initialization.
+\item Vary $(k_b,k_s,\kappa)$ to see the qualitative change in equilibria.
+\item Observe sensitivity to the initial curve (multiple local minima).
+\end{itemize}
+
+\end{document}
