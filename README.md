@@ -62,9 +62,6 @@ See `src/elastic_rod/model.py`.
 MIT (for the starter code). Add your course policy as needed.
 
 
-## Autograding
-See `docs/AUTOGRADING.md` and try:
-```bash
-python scripts/autograde_local.py --mode accuracy
-python scripts/autograde_local.py --mode speed
-```
+## Gradescope
+Staff: see `gradescope/README_GRADESCOPE.md` for an autograder skeleton.
+Students: see `docs/AUTOGRADING.md` and run `python scripts/autograde_local.py --mode accuracy`.

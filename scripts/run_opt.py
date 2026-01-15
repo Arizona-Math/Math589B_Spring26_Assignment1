@@ -23,21 +23,21 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
-    X0 = random_loop(args.N, radius=6.0, noise=0.4, seed=args.seed)
+    X0 = random_loop(args.N, radius=7.0, noise=0.5, seed=args.seed)
     x0 = pack(X0)
 
-    params = RodParams(kb=2.0, ks=60.0, l0=0.5, q=1.0, kappa=0.3)
+    # Tuned defaults that (once WCA is implemented) tend to produce packed/coiled states.
+    params = RodParams(kb=1.0, ks=80.0, l0=0.5, kc=0.02, eps=1.0, sigma=0.35)
     model = RodEnergy(params)
 
     def f_and_g(x):
         return model.value_and_grad(x)
 
-    res = bfgs(f_and_g, x0, max_iter=args.steps)
+    res = bfgs(f_and_g, x0, max_iter=args.steps, tol=1e-6)
     print("converged:", res.converged, "iters:", res.n_iter, "f:", res.f, "||g||:", np.linalg.norm(res.g))
 
     X = unpack(res.x)
 
-    # Plot energy history
     plt.figure()
     plt.plot(res.history["f"])
     plt.xlabel("iteration")
@@ -45,7 +45,6 @@ def main():
     plt.title("BFGS energy history")
     plt.show()
 
-    # Simple 3D plot (matplotlib)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     ax.plot(X[:,0], X[:,1], X[:,2], marker="o", markersize=2)
